@@ -13,7 +13,97 @@ The **AEU Enact Eze** project aims to modernize the logistical support for the A
 *   **Route Optimization:** Integrate charging stops into the Enact's tactical navigation overlay.
 *   **Secure Communication:** Ensure location data of the mobile suit remains encrypted during API queries.
 
-## 3. System Architecture
+## System Architecture
 
 The solution utilizes a **NestJS** backend acting as a "Tactical Support Middleware" between the Mobile Suit and the public internet.
 
+![alt text](aeu-eze-arch.png)
+
+The Microservice will use BullMQ to create a Job Producer that will spawn enqueuable Repeatable Jobs to fetch data from the OCM API using the proper GraphQL schema to retrieve just the necessary data. BullMQ enforces the use of Redis to keep track of the state of each job.
+
+There will be also an event listener layer coded in Lua in top of Redis to report the state (success or failure) of each job.
+
+For observability we will use Prometheus and Grafana to monitor the performance and the state of the service. This will be connected directly to the event listener.
+
+## Database
+
+To avoid repeating database schemas that match the GraphQL ones and following the DRY principle I decided to use [Tarantool](https://www.tarantool.io/en/tarantooldb/doc/latest/) as the database. Tarantool is a russian DB that uses Lua tables to store data.
+
+```lua
+#!/usr/bin/env tarantool
+
+-- Configure the Tarantool instance
+box.cfg{
+    listen = 3301,
+    memtx_memory = 128 * 1024 * 1024, -- 128MB memory limit
+}
+
+-- Initialize the schema once
+box.once('init_schema', function()
+    -- Create a space named 'stations' to store OCM data
+    local stations = box.schema.space.create('stations', {
+        if_not_exists = true,
+        format = {
+            {name = 'id', type = 'unsigned'},           -- OCM ID
+            {name = 'uuid', type = 'string'},           -- OCM UUID
+            {name = 'title', type = 'string'},          -- Station Title
+            {name = 'latitude', type = 'number'},       -- GPS Lat
+            {name = 'longitude', type = 'number'},      -- GPS Lon
+            {name = 'max_power_kw', type = 'number', is_nullable = true}, -- Calculated max output
+            {name = 'raw_data', type = 'map'}           -- Full JSON object from OCM
+        }
+    })
+
+    -- Create a primary index on the OCM ID
+    stations:create_index('primary', {
+        parts = {'id'},
+        if_not_exists = true
+    })
+
+    -- Create a secondary index on UUID
+    stations:create_index('uuid', {
+        parts = {'uuid'},
+        unique = true,
+        if_not_exists = true
+    })
+
+    print('AEU Enact Eze: Station schema initialized.')
+end)
+
+-- Stored procedure to upsert (update or insert) station data
+function save_station_data(data)
+    local id = data.ID
+    local uuid = data.UUID
+    local address = data.AddressInfo or {}
+    local title = address.Title or 'Unknown Location'
+    local lat = address.Latitude or 0
+    local lon = address.Longitude or 0
+    
+    -- Calculate max power for the Mobile Suit capacitors
+    local max_kw = 0
+    if data.Connections then
+        for _, conn in pairs(data.Connections) do
+            if conn.PowerKW and conn.PowerKW > max_kw then
+                max_kw = conn.PowerKW
+            end
+        end
+    end
+
+    -- Perform the upsert
+    box.space.stations:upsert(
+        {id, uuid, title, lat, lon, max_kw, data},
+        {
+            {'=', 3, title},
+            {'=', 4, lat},
+            {'=', 5, lon},
+            {'=', 6, max_kw},
+            {'=', 7, data}
+        }
+    )
+    return true
+end
+```
+
+Lua tables are state-of-the-art associative arrays. Where keys and values can be everything (functions, strings, numbers, and other tables). The language even provides metatables to create macros to modify on-the-fly the table behavior.
+
+The main line of thought is that in this fictional world of Gundam 00 where giant transformable electric-powered mobile suits need to be deployed startegically across Europe, the use SQL databases seems cumbersome. The pilot should be able to use the data as code (one of the LISP principles for symbolic compuitattion). A dynamic typed language will perfectly fit a MS pilot.
