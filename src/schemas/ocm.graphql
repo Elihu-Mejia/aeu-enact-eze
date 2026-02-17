@@ -1,0 +1,163 @@
+type AddressInfo {
+  ID: Int
+  Title: String
+  AddressLine1: String
+  Town: String
+  StateOrProvince: String
+  Postcode: String
+  CountryID: Int
+  Latitude: Float
+  Longitude: Float
+  ContactTelephone1: String
+  ContactEmail: String
+  AccessComments: String
+  RelatedURL: String
+  Distance: Float
+  DistanceUnit: Int
+}
+
+type ConnectionType {
+  ID: Int
+  Title: String
+  FormalName: String
+  IsDiscontinued: Boolean
+  IsObsolete: Boolean
+}
+
+type StatusType {
+  ID: Int
+  Title: String
+  IsOperational: Boolean
+  IsUserSelectable: Boolean
+}
+
+type Level {
+  ID: Int
+  Title: String
+  Comments: String
+  IsFastChargeCapable: Boolean
+}
+
+type CurrentType {
+  ID: Int
+  Title: String
+  Description: String
+}
+
+type Connection {
+  ID: Int
+  ConnectionTypeID: Int
+  ConnectionType: ConnectionType
+  Reference: String
+  StatusTypeID: Int
+  StatusType: StatusType
+  LevelID: Int
+  Level: Level
+  Amps: Int
+  Voltage: Int
+  PowerKW: Float
+  CurrentTypeID: Int
+  CurrentType: CurrentType
+  Quantity: Int
+  Comments: String
+}
+
+type DataProvider {
+  ID: Int
+  Title: String
+  WebsiteURL: String
+  Comments: String
+}
+
+type OperatorInfo {
+  ID: Int
+  Title: String
+  WebsiteURL: String
+  Comments: String
+  PhonePrimaryContact: String
+  PhoneSecondaryContact: String
+  IsPrivateIndividual: Boolean
+  AddressInfo: AddressInfo
+  BookingURL: String
+  ContactEmail: String
+  FaultReportEmail: String
+  IsRestrictedEdit: Boolean
+}
+
+type UsageType {
+  ID: Int
+  Title: String
+  IsPayAtLocation: Boolean
+  IsMembershipRequired: Boolean
+  IsAccessKeyRequired: Boolean
+}
+
+type UserComment {
+  ID: Int
+  ChargePointID: Int
+  CommentTypeID: Int
+  UserName: String
+  Comment: String
+  Rating: Int
+  DateCreated: String
+  RelatedURL: String
+}
+
+type MediaItem {
+  ID: Int
+  ChargePointID: Int
+  ItemURL: String
+  ItemThumbnailURL: String
+  Comment: String
+  IsEnabled: Boolean
+  IsVideo: Boolean
+  IsFeaturedItem: Boolean
+  IsExternalResource: Boolean
+  MetadataValue: String
+  DateCreated: String
+}
+
+type ChargingStation {
+  ID: Int!
+  UUID: String
+  ParentChargePointID: Int
+  DataProviderID: Int
+  DataProvider: DataProvider
+  OperatorID: Int
+  OperatorInfo: OperatorInfo
+  UsageTypeID: Int
+  UsageType: UsageType
+  UsageCost: String
+  AddressInfo: AddressInfo
+  Connections: [Connection]
+  NumberOfPoints: Int
+  GeneralComments: String
+  DatePlanned: String
+  DateLastConfirmed: String
+  StatusTypeID: Int
+  StatusType: StatusType
+  DateLastStatusUpdate: String
+  DataQualityLevel: Int
+  DateCreated: String
+  SubmissionStatusTypeID: Int
+  UserComments: [UserComment]
+  MediaItems: [MediaItem]
+  IsRecentlyVerified: Boolean
+  DateLastVerified: String
+}
+
+type Query {
+  station(id: Int!): ChargingStation
+  stations(
+    latitude: Float!
+    longitude: Float!
+    distance: Float
+    distanceUnit: String
+    maxResults: Int
+  ): [ChargingStation]
+}
+
+type Mutation {
+  saveStation(id: Int!): ChargingStation
+  spawnFetchJob(latitude: Float!, longitude: Float!, distance: Float): Boolean
+}

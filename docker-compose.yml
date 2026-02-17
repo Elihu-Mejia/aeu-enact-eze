@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - TARANTOOL_HOST=tarantool
+      - TARANTOOL_PORT=3301
+      # Pass the OCM API Key from your host .env or environment
+      - OCM_API_KEY=${OCM_API_KEY}
+    depends_on:
+      - redis
+      - tarantool
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - aeu-network
+
+  redis:
+    image: redis:alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - aeu-network
+
+  tarantool:
+    image: tarantool/tarantool:latest
+    restart: always
+    ports:
+      - "3301:3301"
+    volumes:
+      - ./tarantool/init.lua:/opt/tarantool/init.lua
+    command: tarantool /opt/tarantool/init.lua
+    networks:
+      - aeu-network
+
+  prometheus:
+    image: prom/prometheus
+    restart: always
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - aeu-network
+
+  grafana:
+    image: grafana/grafana
+    restart: always
+    ports:
+      - "3001:3000" # Mapped to 3001 to avoid conflict with App on 3000
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - aeu-network
+
+networks:
+  aeu-network:
+    driver: bridge

@@ -107,3 +107,50 @@ end
 Lua tables are state-of-the-art associative arrays. Where keys and values can be everything (functions, strings, numbers, and other tables). The language even provides metatables to create macros to modify on-the-fly the table behavior.
 
 The main line of thought is that in this fictional world of Gundam 00 where giant transformable electric-powered mobile suits need to be deployed startegically across Europe, the use SQL databases seems cumbersome. The pilot should be able to use the data as code (one of the LISP principles for symbolic compuitattion). A dynamic typed language will perfectly fit a MS pilot.
+
+## How to Run
+
+### Prerequisites
+*   Docker
+*   Docker Compose
+
+### Environment Setup
+Create a `.env` file in the root directory with your Open Charge Map API key:
+
+```bash
+PORT=3000
+OCM_API_KEY=your_open_charge_map_api_key
+TARANTOOL_HOST=tarantool
+TARANTOOL_PORT=3301
+REDIS_HOST=redis
+REDIS_PORT=6379
+```
+
+### 2. Start the Stack
+Run the following command to build and start all services:
+
+```bash
+docker-compose up --build
+```
+
+### Access Points
+*   **AEU Enact Eze API (GraphQL):** http://localhost:3000/graphql
+*   **Prometheus (Metrics):** http://localhost:9090
+*   **Grafana (Dashboards):** http://localhost:3001 (Default login: `admin` / `admin`)
+
+### Usage
+1.  Open the GraphQL Playground at `http://localhost:3000/graphql`.
+2.  Run the `spawnFetchJob` mutation to start fetching data for a specific sector:
+    ```graphql
+    mutation {
+      spawnFetchJob(latitude: 52.5200, longitude: 13.4050, distance: 50)
+    }
+    ```
+
+## Testing
+
+### End-to-End (E2E) Tests
+To run the end-to-end tests (which mock external services like OCM and Tarantool):
+```bash
+npm run test:e2e
+```
