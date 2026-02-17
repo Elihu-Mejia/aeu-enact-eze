@@ -175,3 +175,7 @@ Here's their Tieren:
     *   30mm Machine Gun
     *   Carbon Blade
     *   Shield
+
+# Final Considerations
+
+I made this project as a work of fiction. I'm right now recovering from a major cirurgy and I'm feeling a lot of pain. So I decided to have fun with this challenge.
